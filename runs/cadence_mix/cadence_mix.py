@@ -72,8 +72,9 @@ for filtername in filters:
     bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., nside=nside))
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
-    bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=90.))
-    weights = np.array([3.0, 0.3, 1., 3., 3., 0])
+    bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
+    bfs.append(Cadence_enhance_basis_function(nside=nside, apply_area=cadence_area, filtername='gri'))
+    weights = np.array([3.0, 0.3, 1., 3., 3., 0, 3.])
     # Might want to try ignoring DD observations here, so the DD area gets covered normally--DONE
     surveys.append(fs.Greedy_survey_fields(bfs, weights, block_size=1, filtername=filtername,
                                            dither=True, nside=nside, ignore_obs='DD'))
