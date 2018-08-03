@@ -6,6 +6,7 @@ import healpy as hp
 import time
 import matplotlib.pylab as plt
 from drive_cadence import Cadence_enhance_basis_function
+from lsst.sims.utils import hpid2RaDec
 
 
 survey_length = 365.25*10  # days
@@ -16,10 +17,13 @@ t0 = time.time()
 target_map = fs.standard_goals(nside=nside)
 # Wipe out everything but the WFD area
 wfd_area = np.where(target_map['r'] == 1)
+hpids = np.arange(target_map['r'].size)
+hpra, hpdec = hpid2RaDec(nside, hpids)
+new_wfd_area = np.where((hpdec > -65.) & (hpdec < 4))
 for key in target_map:
-    wfd_val = target_map[key][wfd_area]
+    wfd_val = np.max(target_map[key][wfd_area])
     target_map[key] = target_map[key]*0
-    target_map[key][wfd_area] = wfd_val
+    target_map[key][new_wfd_area] = wfd_val
 
 
 norm_factor = fs.calc_norm_factor(target_map)
