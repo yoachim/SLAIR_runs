@@ -8,7 +8,7 @@ import matplotlib.pylab as plt
 from drive_cadence import Cadence_enhance_basis_function
 
 
-survey_length = 15. #365.25*10  # days
+survey_length = 365.25 #365.25*10  # days
 nside = fs.set_default_nside(nside=32)
 years = np.round(survey_length/365.25)
 t0 = time.time()
@@ -21,10 +21,14 @@ cadence_area = target_map['r'] * 0
 cadence_area[np.where(target_map['r'] == 1)] = 1.
 # hp.mollview(cadence_area, title='Where to drive cadence')
 
+# set up a cloud map
+cloud_map = target_map['r']*0 + 0.7
+
+
 # Set up observations to be taken in blocks
 surveys = []
-filter1s = ['u', 'g', 'r', 'i', 'z', 'y']
-filter2s = [None, 'r', 'i', 'g', None, None]
+filter1s = ['u', 'g', 'r', 'i', 'z']
+filter2s = [None, 'r', 'i', 'g', None]
 pair_surveys = []
 for filtername, filtername2 in zip(filter1s, filter2s):
     bfs = []
@@ -41,12 +45,16 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
     bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
-    bfs.append(Cadence_enhance_basis_function(nside=nside, apply_area=cadence_area, filtername='gri'))
-    bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., nside=nside))
-    weights = np.array([0., 0.3, 0.3, 3., 3., 0., 3., 0.])
+    bfs.append(Cadence_enhance_basis_function(nside=nside, enhance_window=[2.1, 4.1],
+                                              apply_area=cadence_area, filtername='gri'))
+    bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., zenith_pad=20.,
+                                                   nside=nside))
+    bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
+    bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
+    weights = np.array([0., 0.3, 0.3, 3., 1., 0., 3., 0., 0., 0.])
     if filtername2 is None:
         # Need to scale weights up so filter balancing still works properly.
-        weights = np.array([0., 0.6, 3., 3., 0., 3., 0.])
+        weights = np.array([0., 0.6, 3., 1., 0., 3., 0., 0., 0.])
 
     if filtername2 is None:
         survey_name = 'blob, %s' % filtername
@@ -73,14 +81,21 @@ for filtername in filters:
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
     bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
-    bfs.append(Cadence_enhance_basis_function(nside=nside, apply_area=cadence_area, filtername='gri'))
-    weights = np.array([3.0, 0.3, 1., 3., 3., 0, 3.])
+    bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
+    bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
+    weights = np.array([3.0, 0.3, 1., 3., 3., 0, 0., 0.])
     # Might want to try ignoring DD observations here, so the DD area gets covered normally--DONE
     surveys.append(fs.Greedy_survey_fields(bfs, weights, block_size=1, filtername=filtername,
                                            dither=True, nside=nside, ignore_obs='DD'))
     greedy_surveys.append(surveys[-1])
 
-survey_list_o_lists = [pair_surveys, greedy_surveys]
+
+# Set up the DD surveys
+dd_surveys = fs.generate_dd_surveys()
+surveys.extend(dd_surveys)
+
+survey_list_o_lists = [dd_surveys, pair_surveys, greedy_surveys]
+
 scheduler = fs.Core_scheduler(survey_list_o_lists, nside=nside)
 n_visit_limit = None
 observatory = Speed_observatory(nside=nside, quickTest=True)
