@@ -9,7 +9,7 @@ import time
 
 t0 = time.time()
 
-survey_length = 120. #365.25*10  # days
+survey_length = 365.25*10  # days
 nside = fs.set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)

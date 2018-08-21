@@ -12,7 +12,8 @@ LSST observing cadence experiments
 | cadence_roll_75_mix | use the cadence basis function and rolling cadence together |
 | roll_mix_100 | Use cadence basis function and rolling cadence, with the roll being a full on/off |
 | cadence_mix_wfd | same as cadence_mix, but with only the WFD regions |
-| tight_mask | use a restrictive alt-az mask to force merdian scanning |
+| tight_mask | use a restrictive alt-az mask to force merdian scanning, try to force cadence (didn't work well) |
+| tight_mask_simple | Use a tight alt-az mask, only y in twilight. No 5-sigma depth used for filter selection |
 
 
 Results at:  https://lsst-web.ncsa.illinois.edu/sim-data/beta_slair_surveys/

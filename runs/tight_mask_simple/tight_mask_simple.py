@@ -27,8 +27,8 @@ cloud_map = target_map['r']*0 + 0.7
 
 # Set up observations to be taken in blocks
 surveys = []
-filter1s = ['u', 'g', 'r', 'i', 'z']
-filter2s = [None, 'r', 'i', 'g', None]
+filter1s = ['u', 'g', 'r', 'i', 'z', 'y']
+filter2s = [None, 'r', 'i', 'g', None, None]
 pair_surveys = []
 for filtername, filtername2 in zip(filter1s, filter2s):
     bfs = []
@@ -45,16 +45,14 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
     bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
-    bfs.append(Cadence_enhance_basis_function(nside=nside, enhance_window=[2.1, 4.1],
-                                              apply_area=cadence_area, filtername='gri'))
     bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., zenith_pad=20.,
                                                    nside=nside))
     bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
     bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
-    weights = np.array([0., 0.3, 0.3, 3., 1., 0., 3., 0., 0., 0.])
+    weights = np.array([0., 0.3, 0.3, 3., 1., 0., 0., 0., 0.])
     if filtername2 is None:
         # Need to scale weights up so filter balancing still works properly.
-        weights = np.array([0., 0.6, 3., 1., 0., 3., 0., 0., 0.])
+        weights = np.array([0., 0.6, 3., 1., 0., 0., 0., 0.])
 
     if filtername2 is None:
         survey_name = 'blob, %s' % filtername
@@ -101,7 +99,7 @@ n_visit_limit = None
 observatory = Speed_observatory(nside=nside, quickTest=True)
 observatory, scheduler, observations = fs.sim_runner(observatory, scheduler,
                                                      survey_length=survey_length,
-                                                     filename='tight_mask_%iyrs.db' % years,
+                                                     filename='tight_mask_simple_%iyrs.db' % years,
                                                      delete_past=True, n_visit_limit=n_visit_limit)
 t1 = time.time()
 delta_t = t1-t0
