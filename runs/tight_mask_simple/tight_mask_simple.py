@@ -47,12 +47,13 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
     bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., zenith_pad=20.,
                                                    nside=nside))
+    bfs.append(fs.Quadrant_basis_function(quadrants=['N', 'E', 'S'], azWidth=90.))
     bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
     bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
-    weights = np.array([0., 0.3, 0.3, 3., 1., 0., 0., 0., 0.])
+    weights = np.array([0., 0.3, 0.3, 3., 1., 0., 0., 0., 0., 0.])
     if filtername2 is None:
         # Need to scale weights up so filter balancing still works properly.
-        weights = np.array([0., 0.6, 3., 1., 0., 0., 0., 0.])
+        weights = np.array([0., 0.6, 3., 1., 0., 0., 0., 0., 0.])
 
     if filtername2 is None:
         survey_name = 'blob, %s' % filtername
@@ -60,7 +61,8 @@ for filtername, filtername2 in zip(filter1s, filter2s):
         survey_name = 'blob, %s%s' % (filtername, filtername2)
     surveys.append(fs.Blob_survey(bfs, weights, filtername=filtername,
                                   filter2=filtername2,
-                                  survey_note=survey_name))
+                                  survey_note=survey_name, az_range=180.,
+                                  search_radius=90, ignore_obs='DD'))
     pair_surveys.append(surveys[-1])
 
 
@@ -78,7 +80,7 @@ for filtername in filters:
     bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., nside=nside))
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
-    bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
+    bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=0., max_alt=76.))
     bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
     bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
     weights = np.array([3.0, 0.3, 1., 3., 3., 0, 0., 0.])
