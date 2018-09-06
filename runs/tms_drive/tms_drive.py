@@ -43,7 +43,8 @@ for filtername, filtername2 in zip(filter1s, filter2s):
                                                 norm_factor=norm_factor))
     bfs.append(fs.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(fs.Strict_filter_basis_function(filtername=filtername))
-    bfs.append(fs.Cadence_enhance_basis_function(enhance_window=[2.1, 5.], nside=nside))
+    bfs.append(fs.Cadence_enhance_basis_function(enhance_window=[2.1, 5.], apply_area=cadence_area,
+                                                 nside=nside))
     bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
     bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., zenith_pad=20.,
                                                    nside=nside))

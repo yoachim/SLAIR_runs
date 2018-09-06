@@ -15,6 +15,7 @@ LSST observing cadence experiments
 | tight_mask | use a restrictive alt-az mask to force merdian scanning, try to force cadence (didn't work well) |
 | tight_mask_simple | Use a tight alt-az mask, only y in twilight. No 5-sigma depth used for filter selection |
 | tms_drive | tight mask, only y in twilight, no 5-sigma depth used for filter, added basis function to reward 2.1-5 day cadence in g,r,i |
-
+| tms_roll | Like tight_mask_simple, adding rolling cadence | 
+| year_1 | Work on a survey that does a good job in year 1 closing sky and gathering templates |
 
 Results at:  https://lsst-web.ncsa.illinois.edu/sim-data/beta_slair_surveys/
