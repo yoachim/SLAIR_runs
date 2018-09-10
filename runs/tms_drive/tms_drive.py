@@ -7,7 +7,7 @@ import time
 import matplotlib.pylab as plt
 
 
-survey_length = 60. #365.25*10  # days
+survey_length = 365.25*10  # days
 nside = fs.set_default_nside(nside=32)
 years = np.round(survey_length/365.25)
 t0 = time.time()
