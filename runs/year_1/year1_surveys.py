@@ -7,6 +7,21 @@ import healpy as hp
 from lsst.sims.skybrightness_pre import M5percentiles
 from lsst.sims.utils import hpid2RaDec
 import lsst.sims.featureScheduler.features as features
+import lsst.sims.skybrightness_pre as sb
+
+
+class Current_seeing(fs.BaseConditionsFeature):
+    def __init__(self, filtername='r', nside=None):
+        if nside is None:
+            nside = fs.utils.set_default_nside()
+        self.nside = nside
+        self.feature = None
+        self.filtername = filtername
+
+    def update_conditions(self, conditions, **kwargs):
+        self.feature = conditions['FWHMeff_%s' % self.filtername]
+        self.feature = hp.ud_grade(self.feature, nside_out=self.nside)
+
 
 class Time_limit_basis_function(fs.Base_basis_function):
     """Limit how long a survey can run with a basis function
@@ -24,9 +39,14 @@ class Time_limit_basis_function(fs.Base_basis_function):
         self.day_max = day_max
         self.day_min = day_min
 
-        if condition_features is None:
+        self.condition_features = condition_features
+        self.survey_features = survey_features
+
+        if self.condition_features is None:
             self.condition_features = {}
             self.condition_features['Current_mjd'] = fs.features.Current_mjd()
+        if self.survey_features is None:
+            self.survey_features = {}
 
     def update_conditions(self, conditions):
         for feature in self.condition_features:
@@ -45,7 +65,7 @@ class Time_limit_basis_function(fs.Base_basis_function):
             result = True
         return result
 
-    def __call__(self):
+    def __call__(self, **kwards):
         return 0
 
 
@@ -61,23 +81,27 @@ class Seeing_limit_basis_function(fs.Base_basis_function):
         if nside is None:
             nside = fs.utils.set_default_nside()
         self.max_seeing = max_seeing
+        self.nside = nside
         self.filtername = filtername
 
         if condition_features is None:
             self.condition_features = {}
-            self.condition_features['Current_seeing'] = fs.features.Current_seeing(filtername=filtername,
-                                                                                   nside=nside)
+            self.condition_features['Current_seeing'] = Current_seeing(filtername=filtername,
+                                                                       nside=nside)
+        if survey_features is None:
+            self.survey_features = {}
+
         self.result_map = np.zeros(hp.nside2npix(self.nside))
 
     def check_feasibility(self):
-        if np.max(self()) == hp.UNSEEN:
+        if np.max(self.__call__()) == hp.UNSEEN:
             return False
         else:
             return True
 
-    def __call__(self):
+    def __call__(self, indx=None):
         result = self.result_map.copy()
-        poor_seeing = np.where(self.condition_features['Current_seeing'] > self.max_seeing)
+        poor_seeing = np.where(self.condition_features['Current_seeing'].feature > self.max_seeing)
         result[poor_seeing] = hp.UNSEEN
         return result
 
@@ -85,11 +109,39 @@ class Seeing_limit_basis_function(fs.Base_basis_function):
 class Nvis_limit_basis_function(Seeing_limit_basis_function):
     """Shut off observations after a given number of visits
     """
-    def __init__(self, ):
-        pass
+    def __init__(self, nside=None, filtername='r', n_limit=3,
+                 seeing_limit=1.2, time_lag=0.45,
+                 survey_features=None, condition_features=None,
+                 mixed_features=None, **kwargs):
+        """
 
-    def __call__(self):
-        pass
+        """
+        if nside is None:
+            nside = utils.set_default_nside()
+        self.filtername = filtername
+        self.n_limit = n_limit
+
+        self.condition_features = condition_features
+        self.survey_features = survey_features
+        self.mixed_features = mixed_features
+        if self.survey_features is None:
+            self.survey_features = {}
+        if self.mixed_features is None:
+            self.mixed_features = {}
+            self.mixed_features['N_good'] = N_obs_good_conditions_feature(filtername=filtername,
+                                                                          nside=nside,
+                                                                          seeing_limit=seeing_limit,
+                                                                          time_lag=time_lag,
+                                                                          **kwargs)
+        if self.condition_features is None:
+            self.condition_features = {}
+        self.result = np.zeros(hp.nside2npix(nside), dtype=float)
+
+    def __call__(self, indx=None):
+        result = self.result.copy()
+        over_count = np.where(self.mixed_features['N_good'].feature >= self.n_limit)
+        result[over_count] = hp.UNSEEN
+        return result
 
 
 class Limit_m5_percentile_basis_function(Seeing_limit_basis_function):
@@ -107,31 +159,79 @@ class Limit_m5_percentile_basis_function(Seeing_limit_basis_function):
         if nside is None:
             nside = utils.set_default_nside()
         self.filtername = filtername
-        self.percentile_limit = percentile_limit
+        self.percentile_limit = percentile_limit/100. #  Saved percentiles are between 0-1
         self.m5p = M5percentiles()
+        self.condition_features = condition_features
+        self.survey_features = survey_features
         if self.condition_features is None:
             self.condition_features = {}
             self.condition_features['m5depth'] = fs.M5Depth(filtername=filtername)
+        if self.survey_features is None:
+            self.survey_features = {}
+
         self.result_map = np.zeros(hp.nside2npix(nside))
 
-    def __call__(self):
+    def __call__(self, indx=None):
         result = self.result_map.copy()
-        per_map = self.m5p.m5map2percentile(self.condition_features['m5depth'])
+        per_map = self.m5p.m5map2percentile(self.condition_features['m5depth'].feature)
         below_limit = np.where(per_map < self.percentile_limit)
         result[below_limit] = hp.UNSEEN
         return result
 
 
-class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
+class Limit_m5_map_basis_function(Seeing_limit_basis_function):
+    """
+    """
+    def __init__(self, m5_limit, nside=None, filtername='r',
+                 survey_features=None, condition_features=None, **kwargs):
+        """
+        Parameters
+        ----------
+        m5_limit : healpy array
+            The faintest acceptable percentile 5-sigma depth to consider for observing.
+            Anything below the limit will be masked.
+        """
+        if nside is None:
+            nside = utils.set_default_nside()
+        if hp.npix2nside(np.size(m5_limit)) != nside:
+            raise ValueError('m5_limit map nside does not match basis function nside')
+        self.filtername = filtername
+        self.m5_limit = m5_limit
+        self.condition_features = condition_features
+        self.survey_features = survey_features
+        if self.condition_features is None:
+            self.condition_features = {}
+            self.condition_features['m5depth'] = fs.M5Depth(filtername=filtername, nside=nside)
+        if self.survey_features is None:
+            self.survey_features = {}
+
+        self.result_map = np.zeros(hp.nside2npix(nside))
+
+    def __call__(self, indx=None):
+        result = self.result_map.copy()
+        diff = self.condition_features['m5depth'].feature - self.m5_limit
+        below_limit = np.where(diff < 0)
+        result[below_limit] = hp.UNSEEN
+        return result
+
+
+
+
+class N_obs_good_conditions_feature(fs.BaseMixedFeature):
     """
     Track the number of observations that have been made accross the sky.
     """
-    def __init__(self, filtername='r', nside=None, mask_indx=None):
+    def __init__(self, filtername='r', seeing_limit=1.2, time_lag=0.45,
+                 nside=None, mask_indx=None):
         """
         Parameters
         ----------
         filtername : str ('r')
             String or list that has all the filters that can count.
+        seeing_limit : float (1.2)
+            Only count an observation if the seeing is less than seeing_limit (arcsec).
+        time_lag : float (0.45)
+            Only count an observation if at least time_lag has elapsed (days).
         nside : int (32)
             The nside of the healpixel map to use
         mask_indx : list of ints (None)
@@ -144,20 +244,32 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
         self.feature = np.zeros(hp.nside2npix(nside), dtype=float)
         self.filtername = filtername
         self.mask_indx = mask_indx
+        self.time_lag = time_lag
+        self.seeing_limit = seeing_limit
 
         self.extra_features = {}
-        self.extra_features['last_observed'] = 
+        self.extra_features['last_observed'] = fs.Last_observed(filtername=filtername, nside=nside)
+        self.extra_features['seeing'] = Current_seeing(filtername=filtername, nside=nside)
 
-    def _conditions_good(self, observation):
+    def _conditions_good(self, observation, indx):
         """Check if the observation counts as "good"
         """
 
-        result = True
-        # Are the conditions good enough?
+        # How long has it been?
+        dt = observation['mjd'] - self.extra_features['last_observed'].feature[indx]
 
-        # has it been long enough since it was last observed?
+        good = np.where(dt > self.time_lag)[0]
+        if (good.size > 0) & (np.nanmin(self.extra_features['seeing'].feature[indx] - self.seeing_limit) < 0):
+            result = True
+        else:
+            result = False
 
         return result
+
+    def update_conditions(self, conditions, **kwargs):
+        for feature in self.extra_features:
+            if hasattr(self.extra_features[feature], 'update_conditions'):
+                self.extra_features[feature].update_conditions(conditions, **kwargs)
 
     def add_observation(self, observation, indx=None):
         """
@@ -168,8 +280,12 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
         """
 
         if self.filtername is None or observation['filter'][0] in self.filtername:
-            if self._conditions_good(observation):
+            if self._conditions_good(observation, indx):
                 self.feature[indx] += 1
+
+            for feature in self.extra_features:
+                if hasattr(self.extra_features[feature], 'add_observation'):
+                    self.extra_features[feature].add_observation(observation, indx=indx)
 
 
 def large_target_map(nside, dec_max=34.3):
@@ -188,7 +304,7 @@ def year_1_surveys(nside=32, mjd0=None):
     Generate a list of surveys for executing in year 1
     """
 
-    nside = 32
+    nside = nside
     filters = ['u', 'g', 'r', 'i', 'z', 'y']
 
     target_map = large_target_map(nside, dec_max=34.3)
@@ -196,6 +312,13 @@ def year_1_surveys(nside=32, mjd0=None):
 
     # set up a cloud map
     cloud_map = target_map*0 + 0.7
+
+    # Set up map m5-depth limits:
+    m5_limits = {}
+    percentile_cut = 0.7
+    m52per = sb.M5percentiles()
+    for filtername in filters:
+        m5_limits[filtername] = m52per.percentile2m5map(percentile_cut, filtername=filtername, nside=nside)
 
     surveys = []
 
@@ -212,12 +335,22 @@ def year_1_surveys(nside=32, mjd0=None):
         bfs.append(fs.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=0., max_alt=76.))
         bfs.append(fs.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
         bfs.append(fs.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
+        weights = [3.0, 0.3, 3., 3., 0, 0., 0.]
         # add in some constriants to make sure we only observe in good conditions and shut off after 3 good ones
+        bfs.append(Limit_m5_map_basis_function(m5_limits[filtername], nside=nside, filtername=filtername))
+        bfs.append(Seeing_limit_basis_function(nside=nside, filtername=filtername))
+        bfs.append(Time_limit_basis_function(day_max=365.25))
+        # XXX--Do I need a m5-depth limit on here too?
+        bfs.append(Nvis_limit_basis_function(nside=nside, filtername=filtername, n_limit=3,
+                                             seeing_limit=1.2, time_lag=0.45,))
+        weights.extend([0, 0, 0, 0])
+        #weights.extend([0., 0., 0.])
 
-        weights = np.array([3.0, 0.3, 3., 3., 0, 0., 0.])
+        weights = np.array(weights)
         # Might want to try ignoring DD observations here, so the DD area gets covered normally--DONE
         surveys.append(fs.Greedy_survey_fields(bfs, weights, block_size=1, filtername=filtername,
-                                               dither=True, nside=nside, ignore_obs='DD'))
+                                               dither=True, nside=nside, ignore_obs='DD',
+                                               survey_name='templates'))
 
 
     # Do we want to cover all the potential area LSST could observe? In case a GW goes off
