@@ -107,12 +107,13 @@ class Seeing_limit_basis_function(fs.Base_basis_function):
 
 
 class Nvis_limit_basis_function(Seeing_limit_basis_function):
-    """Shut off observations after a given number of visits
+    """Shut off observations after a given number of visits that meet criteria.
     """
     def __init__(self, nside=None, filtername='r', n_limit=3,
                  seeing_limit=1.2, time_lag=0.45,
+                 m5_limit_map=None,
                  survey_features=None, condition_features=None,
-                 mixed_features=None, **kwargs):
+                 **kwargs):
         """
 
         """
@@ -123,23 +124,21 @@ class Nvis_limit_basis_function(Seeing_limit_basis_function):
 
         self.condition_features = condition_features
         self.survey_features = survey_features
-        self.mixed_features = mixed_features
         if self.survey_features is None:
             self.survey_features = {}
-        if self.mixed_features is None:
-            self.mixed_features = {}
-            self.mixed_features['N_good'] = N_obs_good_conditions_feature(filtername=filtername,
-                                                                          nside=nside,
-                                                                          seeing_limit=seeing_limit,
-                                                                          time_lag=time_lag,
-                                                                          **kwargs)
+            self.survey_features['N_good'] = N_obs_good_conditions_feature(filtername=filtername,
+                                                                           nside=nside,
+                                                                           seeing_limit=seeing_limit,
+                                                                           time_lag=time_lag,
+                                                                           m5_limit_map=m5_limit_map,
+                                                                           **kwargs)
         if self.condition_features is None:
             self.condition_features = {}
         self.result = np.zeros(hp.nside2npix(nside), dtype=float)
 
     def __call__(self, indx=None):
         result = self.result.copy()
-        over_count = np.where(self.mixed_features['N_good'].feature >= self.n_limit)
+        over_count = np.where(self.survey_features['N_good'].feature >= self.n_limit)
         result[over_count] = hp.UNSEEN
         return result
 
@@ -220,7 +219,7 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
     Track the number of observations that have been made accross the sky.
     """
     def __init__(self, filtername='r', seeing_limit=1.2, time_lag=0.45,
-                 nside=None, mask_indx=None):
+                 nside=None, m5_limit_map=None, mask_indx=None):
         """
         Parameters
         ----------
@@ -233,6 +232,8 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
             Only count an observation if at least time_lag has elapsed (days).
         nside : int (32)
             The nside of the healpixel map to use
+        m5_limit_map : healpix array (None)
+            The 5-sigma limiting depth the observation must have to count as "good".
         mask_indx : list of ints (None)
             List of healpixel indices to mask and interpolate over
         """
@@ -245,10 +246,14 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
         self.mask_indx = mask_indx
         self.time_lag = time_lag
         self.seeing_limit = seeing_limit
+        if m5_limit_map is None:
+            self.m5_limit_map = np.zeros(hp.nside2npix(nside), dtype=float)
+        else:
+            self.m5_limit_map = m5_limit_map
 
         self.extra_features = {}
+        # Note, this will only count last_observed in good conditions.
         self.extra_features['last_observed'] = fs.Last_observed(filtername=filtername, nside=nside)
-        self.extra_features['seeing'] = Current_seeing(filtername=filtername, nside=nside)
 
     def _conditions_good(self, observation, indx):
         """Check if the observation counts as "good"
@@ -256,9 +261,12 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
 
         # How long has it been?
         dt = observation['mjd'] - self.extra_features['last_observed'].feature[indx]
+        good_time = np.where(dt > self.time_lag)[0]
+        # Is the observation deep enough?
+        d_mag = observation['fivesigmadepth'] - self.m5_limit_map[indx]
+        good_depth = np.where(d_mag > 0)[0]
 
-        good = np.where(dt > self.time_lag)[0]
-        if (good.size > 0) & ((observation['FWHMeff'] - self.seeing_limit) < 0):
+        if (good_time.size > 0) & (good_depth.size > 0) & ((observation['FWHMeff'] - self.seeing_limit) < 0):
             result = True
         else:
             result = False
@@ -277,9 +285,8 @@ class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
             if self._conditions_good(observation, indx):
                 self.feature[indx] += 1
 
-            for feature in self.extra_features:
-                if hasattr(self.extra_features[feature], 'add_observation'):
-                    self.extra_features[feature].add_observation(observation, indx=indx)
+                for feature in self.extra_features:
+                        self.extra_features[feature].add_observation(observation, indx=indx)
 
 
 def large_target_map(nside, dec_max=34.3):
@@ -336,7 +343,8 @@ def year_1_surveys(nside=32, mjd0=None):
         bfs.append(Time_limit_basis_function(day_max=365.25))
         # XXX--Do I need a m5-depth limit on here too?
         bfs.append(Nvis_limit_basis_function(nside=nside, filtername=filtername, n_limit=3,
-                                             seeing_limit=1.2, time_lag=0.45,))
+                                             seeing_limit=1.2, time_lag=0.45,
+                                             m5_limit_map=m5_limits[filtername]))
         weights.extend([0, 0, 0, 0])
         #weights.extend([0., 0., 0.])
 
