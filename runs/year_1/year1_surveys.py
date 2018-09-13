@@ -215,9 +215,7 @@ class Limit_m5_map_basis_function(Seeing_limit_basis_function):
         return result
 
 
-
-
-class N_obs_good_conditions_feature(fs.BaseMixedFeature):
+class N_obs_good_conditions_feature(fs.BaseSurveyFeature):
     """
     Track the number of observations that have been made accross the sky.
     """
@@ -230,6 +228,7 @@ class N_obs_good_conditions_feature(fs.BaseMixedFeature):
             String or list that has all the filters that can count.
         seeing_limit : float (1.2)
             Only count an observation if the seeing is less than seeing_limit (arcsec).
+            Uses the FWHMeff to compare.
         time_lag : float (0.45)
             Only count an observation if at least time_lag has elapsed (days).
         nside : int (32)
@@ -259,17 +258,12 @@ class N_obs_good_conditions_feature(fs.BaseMixedFeature):
         dt = observation['mjd'] - self.extra_features['last_observed'].feature[indx]
 
         good = np.where(dt > self.time_lag)[0]
-        if (good.size > 0) & (np.nanmin(self.extra_features['seeing'].feature[indx] - self.seeing_limit) < 0):
+        if (good.size > 0) & ((observation['FWHMeff'] - self.seeing_limit) < 0):
             result = True
         else:
             result = False
 
         return result
-
-    def update_conditions(self, conditions, **kwargs):
-        for feature in self.extra_features:
-            if hasattr(self.extra_features[feature], 'update_conditions'):
-                self.extra_features[feature].update_conditions(conditions, **kwargs)
 
     def add_observation(self, observation, indx=None):
         """
