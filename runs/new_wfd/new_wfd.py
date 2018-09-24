@@ -10,19 +10,13 @@ from gen_new_map import generate_goal
 
 t0 = time.time()
 
-survey_length = 35. #365.25*10  # days
+survey_length = 366. #365.25*10  # days
 nside = fs.set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)
 
-# The old standard map
-target_map = fs.standard_goals(nside=nside)
-
 # The new target map
-target_map_single = generate_goal(nside)
-# replace the keys
-for key in target_map:
-    target_map[key] = target_map_single
+target_map = generate_goal(nside)
 
 norm_factor = fs.calc_norm_factor(target_map)
 # List to hold all the surveys (for easy plotting later)
@@ -30,7 +24,8 @@ surveys = []
 
 # Set up observations to be taken in blocks
 filter1s = ['u', 'g', 'r', 'i', 'z', 'y']
-filter2s = [None, 'r', 'i', 'g', None, None]
+filter2s = [None, 'g', 'r', 'i', None, None]
+
 pair_surveys = []
 for filtername, filtername2 in zip(filter1s, filter2s):
     bfs = []
