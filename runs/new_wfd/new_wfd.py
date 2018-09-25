@@ -57,7 +57,7 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     else:
         survey_name = 'blob, %s%s' % (filtername, filtername2)
     surveys.append(fs.Blob_survey(bfs, weights, filtername=filtername, filter2=filtername2,
-                                  survey_note=survey_name))
+                                  survey_note=survey_name, ignore_obs='DD'))
     pair_surveys.append(surveys[-1])
 
 
