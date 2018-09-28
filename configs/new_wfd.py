@@ -73,12 +73,8 @@ def generate_target_maps(nside, full_dec_min=-90., full_dec_max=+32., wfd_dec_mi
 
 
 def generate_blob_surveys(nside):
-    # Define what we want the final visit ratio map to look like
 
     target_maps, norm_factor = generate_target_maps(nside)
-
-    tag_map_dummy = target_maps['r']*0+1
-    tag_names_dummy = 'WideFastDeep'
 
     # set up a cloud map
     cloud_map = target_maps['r'][0]*0 + 0.7
@@ -117,23 +113,15 @@ def generate_blob_surveys(nside):
         else:
             survey_name = 'blob, %s%s' % (filtername, filtername2)
         pair_surveys.append(fs.Blob_survey(bfs, weights, filtername=filtername, filter2=filtername2,
-                                           survey_note=survey_name, ignore_obs='DD', tag_fields=True,
-                                           tag_map=tag_map_dummy,
-                                           tag_names=tag_names_dummy))
+                                           survey_note=survey_name, ignore_obs='DD'))
 
     return pair_surveys
 
 
 def generate_greedy(nside):
     target_maps, norm_factor = generate_target_maps(nside)
-    tag_map_dummy = target_maps['r']*0+1
-    tag_names_dummy = 'WideFastDeep'
 
-    cloud_map = fs.generate_cloud_map(target_maps, filtername='i',
-                                      wfd_cloud_max=0.7,
-                                      scp_cloud_max=0.7,
-                                      gp_cloud_max=0.7,
-                                      nes_cloud_max=0.7)
+    cloud_map = target_maps['r'][0]*0 + 0.7
 
     # filters = ['u', 'g', 'r', 'i', 'z', 'y']
     filters = ['g', 'r', 'i', 'z', 'y']
@@ -155,9 +143,6 @@ def generate_greedy(nside):
         surveys.append(fs.Greedy_survey_fields(bfs, weights, block_size=1,
                                                filtername=filtername, dither=True,
                                                nside=nside,
-                                               tag_fields=True,
-                                               tag_map=tag_map_dummy,
-                                               tag_names=tag_names_dummy,
                                                ignore_obs='DD'))
     return surveys
 
