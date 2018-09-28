@@ -89,7 +89,7 @@ for filtername in filters:
 dd_surveys = fs.generate_dd_surveys()
 surveys.extend(dd_surveys)
 
-survey_list_o_lists = [dd_surveys, pair_surveys, greedy_surveys]
+survey_list_o_lists = [pair_surveys, greedy_surveys]  #[dd_surveys, pair_surveys, greedy_surveys]
 
 # Debug to stop at a spot if needed
 n_visit_limit = None
@@ -99,7 +99,7 @@ scheduler = fs.Core_scheduler(survey_list_o_lists, nside=nside)
 observatory = Speed_observatory(nside=nside, quickTest=True)
 observatory, scheduler, observations = fs.sim_runner(observatory, scheduler,
                                                      survey_length=survey_length,
-                                                     filename='new_wfd%iyrs.db' % years,
+                                                     filename='new_wfd_nodd%iyrs.db' % years,
                                                      delete_past=True, n_visit_limit=n_visit_limit)
 t1 = time.time()
 delta_t = t1-t0
