@@ -117,7 +117,7 @@ def generate_greedy(nside):
                                       nes_cloud_max=0.7)
 
     # filters = ['u', 'g', 'r', 'i', 'z', 'y']
-    filters = ['g', 'r', 'i', 'z', 'y']
+    filters = ['r']
     surveys = []
 
     for filtername in filters:
@@ -236,4 +236,4 @@ if __name__ == 'config':
     dd_surveys = generate_dd(nside)
 
 
-    scheduler = fs.Core_scheduler([dd_surveys, blob_surveys, greedy_surveys], nside=nside)  # Required
+    scheduler = fs.Core_scheduler([greedy_surveys], nside=nside)  # Required
