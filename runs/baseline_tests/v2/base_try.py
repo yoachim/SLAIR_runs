@@ -13,7 +13,7 @@ import time
 
 t0 = time.time()
 
-survey_length = 365.25*10  # days
+survey_length = 365.*.25 #365.25*10  # days
 nside = set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)
@@ -64,7 +64,7 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     else:
         survey_name = 'blob, %s%s' % (filtername, filtername2)
     surveys.append(survey.Blob_survey(bfs, weights, filtername1=filtername, filtername2=filtername2,
-                                      survey_note=survey_name, ignore_obs='DD'))
+                                      survey_note=survey_name, ignore_obs='DD', dither=True))
     pair_surveys.append(surveys[-1])
 
 
@@ -109,8 +109,8 @@ for filtername in filters:
 dd_surveys = survey.generate_dd_surveys()
 surveys.extend(dd_surveys)
 
-survey_list_o_lists = [dd_surveys, pair_surveys, greedy_surveys]
-
+#survey_list_o_lists = [dd_surveys, pair_surveys, greedy_surveys]
+survey_list_o_lists = [greedy_surveys]
 # Debug to stop at a spot if needed
 n_visit_limit = None
 
@@ -119,7 +119,7 @@ scheduler = fs.Core_scheduler(survey_list_o_lists, nside=nside)
 observatory = Speed_observatory(nside=nside, quickTest=True)
 observatory, scheduler, observations = sim_runner(observatory, scheduler,
                                                      survey_length=survey_length,
-                                                     filename='baseline_test%iyrs.db' % years,
+                                                     filename='baseline_test_go%iyrs.db' % years,
                                                      delete_past=True, n_visit_limit=n_visit_limit)
 t1 = time.time()
 delta_t = t1-t0

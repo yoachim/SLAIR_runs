@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 import sqlite3 as db
-
+from lsst.sims.utils import angularSeparation
+from astropy.coordinates import get_sun
+from astropy.time import Time
 
 def convert_schema(filename, fileout):
 
@@ -21,6 +23,14 @@ def convert_schema(filename, fileout):
     df['visitTime'] = 2.*df['numExposures'].values + df['visitExposureTime'].values
     # Dummy column
     df['slewDistance'] = 0.*df['numExposures'].values
+
+    # Add the solar elongation in there
+    times = Time(df['observationStartMJD'].values, format='mjd')
+    suns = get_sun(times)
+
+    solarElong = angularSeparation(suns.ra.value, suns.dec.value, df['fieldRA'].values, df['fieldDec'].values)
+
+    df['solarElong'] = solarElong
 
     conn.close()
     conn = db.connect(fileout)
