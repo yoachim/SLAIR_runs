@@ -13,7 +13,7 @@ import time
 
 t0 = time.time()
 
-survey_length = 20. #365.*.25 #365.25*10  # days
+survey_length = 10. #365.25*10  # days
 nside = set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)
@@ -30,6 +30,7 @@ surveys = []
 # Set up observations to be taken in blocks
 filter1s = ['u', 'g', 'r', 'i', 'z', 'y']
 filter2s = [None, 'g', 'r', 'i', None, None]
+
 pair_surveys = []
 times_needed = [22., 44.]
 for filtername, filtername2 in zip(filter1s, filter2s):
@@ -50,16 +51,16 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     bfs.append(basis_functions.Strict_filter_basis_function(filtername=filtername))
     # Masks, give these 0 weight
     bfs.append(basis_functions.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
-    bfs.append(basis_functions.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
+    bfs.append(basis_functions.Moon_avoidance_basis_function(nside=nside, moon_distance=30.))
     bfs.append(basis_functions.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
-
-    bfs.append(basis_functions.Filter_loaded_basis_function(filternames=[filtername, filtername2]))
+    filternames = [fn for fn in [filtername, filtername2] if fn is not None]
+    bfs.append(basis_functions.Filter_loaded_basis_function(filternames=filternames))
     if filtername2 is None:
         time_needed = times_needed[0]
     else:
         time_needed = times_needed[1]
     bfs.append(basis_functions.Time_to_twilight_basis_function(time_needed=time_needed))
-    bfs.append(basis_functions.Not_twilight_basis_function())
+    bfs.append(basis_functions.Not_twilight_basis_function(sun_alt_limit=-18.5))  #XXX--possible bug in pyephem?
     weights = np.array([3.0, 3.0, .3, .3, 3., 3., 0., 0., 0., 0., 0., 0.])
     if filtername2 is None:
         # Need to scale weights up so filter balancing still works properly.
@@ -82,6 +83,7 @@ for filtername, filtername2 in zip(filter1s, filter2s):
 # chase sucker holes.
 #filters = ['u', 'g', 'r', 'i', 'z', 'y']
 filters = ['i', 'z', 'y']
+
 
 greedy_target_map = standard_goals(nside=nside)
 # Let's take out the NES area on the target maps. This way we won't
@@ -106,7 +108,7 @@ for filtername in filters:
     bfs.append(basis_functions.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(basis_functions.Strict_filter_basis_function(filtername=filtername))
     bfs.append(basis_functions.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
-    bfs.append(basis_functions.Moon_avoidance_basis_function(nside=nside, moon_distance=40.))
+    bfs.append(basis_functions.Moon_avoidance_basis_function(nside=nside, moon_distance=30.))
     bfs.append(basis_functions.Bulk_cloud_basis_function(max_cloud_map=cloud_map, nside=nside))
 
     bfs.append(basis_functions.Filter_loaded_basis_function(filternames=filtername))
@@ -130,7 +132,7 @@ scheduler = fs.Core_scheduler(survey_list_o_lists, nside=nside)
 observatory = Speed_observatory(nside=nside, quickTest=True)
 observatory, scheduler, observations = sim_runner(observatory, scheduler,
                                                   survey_length=survey_length,
-                                                  filename='baseline_test_go%iyrs.db' % years,
+                                                  filename='baseline_test%iyrs.db' % years,
                                                   delete_past=True, n_visit_limit=n_visit_limit)
 t1 = time.time()
 delta_t = t1-t0
