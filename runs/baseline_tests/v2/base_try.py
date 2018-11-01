@@ -13,7 +13,7 @@ import time
 
 t0 = time.time()
 
-survey_length = 10. #365.25*10  # days
+survey_length = 365.25*10  # days
 nside = set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)
@@ -84,7 +84,6 @@ for filtername, filtername2 in zip(filter1s, filter2s):
 #filters = ['u', 'g', 'r', 'i', 'z', 'y']
 filters = ['i', 'z', 'y']
 
-
 greedy_target_map = standard_goals(nside=nside)
 # Let's take out the NES area on the target maps. This way we won't
 # take images in the NES that aren't paired.
@@ -120,10 +119,8 @@ for filtername in filters:
 
 # Set up the DD surveys
 dd_surveys = survey.generate_dd_surveys()
-surveys.extend(dd_surveys)
-
 survey_list_o_lists = [dd_surveys, pair_surveys, greedy_surveys]
-#survey_list_o_lists = [greedy_surveys]
+
 # Debug to stop at a spot if needed
 n_visit_limit = None
 
