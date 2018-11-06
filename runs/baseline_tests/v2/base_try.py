@@ -9,7 +9,6 @@ import matplotlib.pylab as plt
 import healpy as hp
 import time
 
-# Let's add a zenith mask to see if that brings the slewtime down
 
 t0 = time.time()
 
@@ -65,10 +64,6 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     if filtername2 is None:
         # Need to scale weights up so filter balancing still works properly.
         weights = np.array([6.0, 0.6, 3., 3., 0., 0., 0., 0., 0., 0.])
-    # XXX-
-    # This is where we could add a look-ahead basis function to include m5_diff in the future.
-    # Actually, having a near-future m5 would also help prevent switching to u or g right at twilight?
-    # Maybe just need a "filter future" basis function?
     if filtername2 is None:
         survey_name = 'blob, %s' % filtername
     else:
@@ -77,10 +72,6 @@ for filtername, filtername2 in zip(filter1s, filter2s):
                                       survey_note=survey_name, ignore_obs='DD', dither=True))
     pair_surveys.append(surveys[-1])
 
-
-# Let's set up some standard surveys as well to fill in the gaps. This is my old silly masked version.
-# It would be good to put in Tiago's verion and lift nearly all the masking. That way this can also
-# chase sucker holes.
 #filters = ['u', 'g', 'r', 'i', 'z', 'y']
 filters = ['i', 'z', 'y']
 
@@ -102,8 +93,6 @@ for filtername in filters:
                                                          target_map=greedy_target_map[filtername],
                                                          out_of_bounds_val=hp.UNSEEN, nside=nside,
                                                          norm_factor=norm_factor))
-
-    #bfs.append(fs.North_south_patch_basis_function(zenith_min_alt=50., nside=nside))
     bfs.append(basis_functions.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(basis_functions.Strict_filter_basis_function(filtername=filtername))
     bfs.append(basis_functions.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
@@ -112,7 +101,6 @@ for filtername in filters:
 
     bfs.append(basis_functions.Filter_loaded_basis_function(filternames=filtername))
     weights = np.array([3.0, 0.3, 3., 3., 0., 0., 0., 0.])
-    # Might want to try ignoring DD observations here, so the DD area gets covered normally--DONE
     surveys.append(survey.Greedy_survey(bfs, weights, block_size=1, filtername=filtername,
                                         dither=True, nside=nside, ignore_obs='DD'))
     greedy_surveys.append(surveys[-1])
