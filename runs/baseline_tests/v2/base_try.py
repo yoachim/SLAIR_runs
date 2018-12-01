@@ -12,7 +12,7 @@ import time
 
 t0 = time.time()
 
-survey_length = 365.25*10  # days
+survey_length = 365.25*1.05 #365.25*10  # days
 nside = set_default_nside(nside=32)
 # Define what we want the final visit ratio map to look like
 years = np.round(survey_length/365.25)
@@ -39,12 +39,12 @@ for filtername, filtername2 in zip(filter1s, filter2s):
         bfs.append(basis_functions.M5_diff_basis_function(filtername=filtername2, nside=nside))
     bfs.append(basis_functions.Target_map_basis_function(filtername=filtername,
                                                          target_map=target_map[filtername],
-                                                         out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                         out_of_bounds_val=np.nan, nside=nside,
                                                          norm_factor=norm_factor))
     if filtername2 is not None:
         bfs.append(basis_functions.Target_map_basis_function(filtername=filtername2,
                                                              target_map=target_map[filtername2],
-                                                             out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                             out_of_bounds_val=np.nan, nside=nside,
                                                              norm_factor=norm_factor))
     bfs.append(basis_functions.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(basis_functions.Strict_filter_basis_function(filtername=filtername))
@@ -91,7 +91,7 @@ for filtername in filters:
     bfs.append(basis_functions.M5_diff_basis_function(filtername=filtername, nside=nside))
     bfs.append(basis_functions.Target_map_basis_function(filtername=filtername,
                                                          target_map=greedy_target_map[filtername],
-                                                         out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                         out_of_bounds_val=np.nan, nside=nside,
                                                          norm_factor=norm_factor))
     bfs.append(basis_functions.Slewtime_basis_function(filtername=filtername, nside=nside))
     bfs.append(basis_functions.Strict_filter_basis_function(filtername=filtername))
