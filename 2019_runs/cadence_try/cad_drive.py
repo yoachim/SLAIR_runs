@@ -76,7 +76,8 @@ def generate_blobs(nside):
                                                     norm_factor=norm_factor))
         bfs.append(bf.Slewtime_basis_function(filtername=filtername, nside=nside))
         bfs.append(bf.Strict_filter_basis_function(filtername=filtername))
-        bfs.append(bf.Cadence_enhance_basis_function(filtername='gri'))
+        if filtername in 'gri':
+            bfs.append(bf.Cadence_enhance_basis_function(filtername='gri', apply_area=drive_map))
         # Masks, give these 0 weight
         bfs.append(bf.Zenith_shadow_mask_basis_function(nside=nside, shadow_minutes=60., max_alt=76.))
         bfs.append(bf.Moon_avoidance_basis_function(nside=nside, moon_distance=30.))
@@ -89,10 +90,16 @@ def generate_blobs(nside):
             time_needed = times_needed[1]
         bfs.append(bf.Time_to_twilight_basis_function(time_needed=time_needed))
         bfs.append(bf.Not_twilight_basis_function())
-        weights = np.array([3.0, 3.0, .3, .3, 3., 3., 5., 0., 0., 0., 0., 0., 0.])
+        if filtername in 'gri':
+            weights = np.array([3.0, 3.0, .3, .3, 3., 3., 5., 0., 0., 0., 0., 0., 0.])
+        else:
+            weights = np.array([3.0, 3.0, .3, .3, 3., 3., 0., 0., 0., 0., 0., 0.])
         if filtername2 is None:
             # Need to scale weights up so filter balancing still works properly.
-            weights = np.array([6.0, 0.6, 3., 3., 5., 0., 0., 0., 0., 0., 0.])
+            if filtername in 'gri':
+                weights = np.array([6.0, 0.6, 3., 3., 5., 0., 0., 0., 0., 0., 0.])
+            else:
+                weights = np.array([6.0, 0.6, 3., 3., 0., 0., 0., 0., 0., 0.])
         if filtername2 is None:
             survey_name = 'blob, %s' % filtername
         else:
@@ -106,7 +113,7 @@ def generate_blobs(nside):
 
 if __name__ == "__main__":
     nside = 32
-    survey_length = 30. #365.25 #365.25*10  # Days
+    survey_length = 365.25 #365.25*10  # Days
     years = int(survey_length/365.25)
 
     greedy = gen_greedy_surveys(nside)
