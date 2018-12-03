@@ -100,7 +100,7 @@ def generate_blobs(nside):
 
 
 if __name__ == "__main__":
-    nside = 64
+    nside = 32
     survey_length = 365.25 #365.25*10  # Days
     years = int(survey_length/365.25)
 
