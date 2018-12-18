@@ -101,11 +101,11 @@ def generate_blobs(nside):
 
 if __name__ == "__main__":
     nside = 32
-    survey_length = 10. #365.25*10  # Days
+    survey_length = 365.25*10  # Days
     years = int(survey_length/365.25)
 
-    greedy = gen_greedy_surveys(nside, nexp=1)
-    ddfs = generate_dd_surveys(nside=nside)
+    greedy = gen_greedy_surveys(nside)
+    ddfs = generate_dd_surveys(nside=nside, nexp=1)
     blobs = generate_blobs(nside)
 
     surveys = [ddfs, blobs, greedy]
@@ -115,5 +115,5 @@ if __name__ == "__main__":
     observatory = Mock_observatory(nside=nside)
     observatory, scheduler, observations = sim_runner(observatory, scheduler,
                                                       survey_length=survey_length,
-                                                      filename='resTest_nside_%i_%i.db' % (nside, years),
+                                                      filename='snap_%i.db' % years,
                                                       n_visit_limit=n_visit_limit)
