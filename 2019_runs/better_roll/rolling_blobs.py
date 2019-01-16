@@ -27,7 +27,6 @@ down = 0.25
 wfd = even_year_target['r'] * 0
 wfd[np.where(even_year_target['r'] == 1)] = 1
 wfd_accum = np.cumsum(wfd)
-hp.mollview(wfd_accum)
 split_indx = np.max(np.where(wfd_accum < wfd_accum.max()/2.))
 
 indx = np.arange(even_year_target['r'].size)
@@ -66,13 +65,13 @@ for filtername, filtername2 in zip(filter1s, filter2s):
     bfs.append(bf.Target_map_modulo_basis_function(filtername=filtername,
                                                 target_maps=target_list,
                                                 season_modulo=mod_year, day_offset=0,
-                                                out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                out_of_bounds_val=np.nan, nside=nside,
                                                 norm_factor=even_norm))
     if filtername2 is not None:
         bfs.append(bf.Target_map_modulo_basis_function(filtername=filtername2,
                                                     target_maps=target_list,
                                                     season_modulo=mod_year, day_offset=0,
-                                                    out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                    out_of_bounds_val=np.nan, nside=nside,
                                                     norm_factor=even_norm))
 
     bfs.append(bf.Slewtime_basis_function(filtername=filtername, nside=nside))
@@ -104,7 +103,7 @@ for filtername in filters:
     bfs.append(bf.Target_map_modulo_basis_function(filtername=filtername,
                                                 target_maps=target_list,
                                                 season_modulo=mod_year, day_offset=0,
-                                                out_of_bounds_val=hp.UNSEEN, nside=nside,
+                                                out_of_bounds_val=np.nan, nside=nside,
                                                 norm_factor=even_norm))
 
     bfs.append(bf.Slewtime_basis_function(filtername=filtername, nside=nside))
